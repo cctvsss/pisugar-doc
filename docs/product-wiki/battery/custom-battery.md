@@ -52,15 +52,172 @@ To measure the battery curve, you can use the following steps:
 
 Note: The above values are examples. Your actual battery curve should be based on measurements from your specific battery.
 
+# PiSugar Battery Curve Calibration Guide
+
+> **Why is this important?**  
+> The battery curve determines how the PiSugar service calculates battery percentage. Calibrating it ensures accurate battery readings.
+
+---
+
+## 1. Download the Script and Save Locally
+
+Create a directory and download the official script:
+
+```bash
+mkdir -p ~/scripts
+wget -q https://raw.githubusercontent.com/PiSugar/pisugar-power-manager-rs/master/scripts/pisugar_battery_curve.py -O ~/scripts/pisugar_battery_curve.py
+```
+
+Check if the file exists:
+
+```bash
+ls -l ~/scripts/pisugar_battery_curve.py
+```
+
+---
+
+## 2. Run the Script Using `screen`
+
+The full charge/discharge process takes **about 6 hours**.  
+Running it directly via SSH is risky because if the session disconnects, the process will stop.  
+We use `screen` to keep the session alive.
+
+Start a screen session:
+
+```bash
+screen -S battery_curve
+```
+
+Run the script:
+
+```bash
+python3 ~/scripts/pisugar_battery_curve.py
+```
+
+Detach from the screen (keep it running in the background):
+
+**Press**:  
+```
+Ctrl + A  then D
+```
+
+To reattach later and check progress:
+
+```bash
+screen -r battery_curve
+```
+
+---
+
+## 3. Wait for Completion and Check the Result
+
+Once the script completes, it will generate a file named:
+
+```
+battery_curve.json
+```
+
+in the same directory.
+
+Check the file:
+
+```bash
+cat ~/scripts/battery_curve.json
+```
+
+Example content:
+
+```json
+"battery_curve": [
+  [4.19, 100],
+  [4.07, 94],
+  [4.02, 87],
+  [3.93, 81],
+  [3.86, 75],
+  [3.80, 69],
+  [3.74, 62],
+  [3.67, 56],
+  [3.63, 50],
+  [3.59, 44],
+  [3.57, 38],
+  [3.53, 31],
+  [3.52, 25],
+  [3.48, 19],
+  [3.43, 13],
+  [3.39, 6],
+  [3.10, 0]
+]
+```
+
+---
+
+## 4. Add the Curve to PiSugar Config
+
+Edit the configuration file:
+
+```bash
+sudo nano /etc/pisugar-server/config.json
+```
+
+Find or add `battery_curve` (if it exists, **replace it**):
+
+```json
+"battery_curve": [
+  [4.19, 100],
+  [4.07, 94],
+  [4.02, 87],
+  [3.93, 81],
+  [3.86, 75],
+  [3.80, 69],
+  [3.74, 62],
+  [3.67, 56],
+  [3.63, 50],
+  [3.59, 44],
+  [3.57, 38],
+  [3.53, 31],
+  [3.52, 25],
+  [3.48, 19],
+  [3.43, 13],
+  [3.39, 6],
+  [3.10, 0]
+]
+```
+
+Save and exit:
+
+```
+Ctrl + O  (Save)
+Ctrl + X  (Exit)
+```
+
+---
+
+## 5. Restart PiSugar Service
+
+```bash
+sudo systemctl restart pisugar-server
+```
+
+After restart, PiSugar will calculate the battery percentage using the new curve.
+
+---
+
 ## Important Notes
 
-- Using batteries larger than the recommended size may affect the physical fit in your project
-- The PiSugar's charging circuit is designed for specific battery capacities; extremely large batteries may take longer to charge
-- Always use quality batteries from reputable manufacturers
-- Never use damaged or swollen batteries
+> **Tip:** Keep your Pi powered during calibration.  
+> **Warning:** Do not disconnect SSH while the script is running.  
+> **Safety:** Improper handling of lithium batteries can pose safety risks. Always follow proper safety procedures.
 
-:::warning
+- Do **not disconnect power** during the calibration process.  
+- The script automatically **restores charging** at the end (even if an error occurs, thanks to `finally` block).  
+- If SSH disconnects, use:
+  ```bash
+  screen -r battery_curve
+  ```
+- After updating the config, **always restart the PiSugar service**.
+- Using batteries larger than the recommended size may affect the physical fit in your project.
+- The PiSugar's charging circuit is designed for specific battery capacities; extremely large batteries may take longer to charge.
+- Always use quality batteries from reputable manufacturers.
+- Never use damaged or swollen batteries.
 
-Improper handling of lithium batteries can pose safety risks. Always follow proper safety procedures when working with lithium batteries.
 
-:::
